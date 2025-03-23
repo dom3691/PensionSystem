@@ -8,15 +8,15 @@ using System.Threading.Tasks;
 
 namespace PensionSystem.Application.Features.Commands;
 
-public class SoftDeleteMemberCommandHandler : IRequestHandler<SoftDeleteMemberCommand, bool>
+public class DeleteMemberCommandHandler : IRequestHandler<DeleteMemberCommand, bool>
 {
     private readonly AppDbContext _context;
-    public SoftDeleteMemberCommandHandler(AppDbContext context)
+    public DeleteMemberCommandHandler(AppDbContext context)
     {
         _context = context;
     }
 
-    public async Task<bool> Handle(SoftDeleteMemberCommand request, CancellationToken cancellationToken)
+    public async Task<bool> Handle(DeleteMemberCommand request, CancellationToken cancellationToken)
     {
         var member = await _context.Members.FindAsync(request.Id);
         if (member == null) throw new Exception("Member not found");

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PensionSystem.Application.DTOs;
 using PensionSystem.Domain.Entities;
 using PensionSystem.Infrastructure.Data;
+using PensionSystem.Infrastructure.ExceptionHandler;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,7 +32,7 @@ public class CreateContributionCommandHandler : IRequestHandler<CreateContributi
         if (!request.IsVoluntary && _context.Contributions
                 .Any(c => c.MemberId == request.MemberId && c.ContributionDate.Month == request.ContributionDate.Month && !c.IsDeleted))
         {
-            throw new InvalidOperationException("You can only make one regular contribution per month.");
+            throw new BusinessException("You can only make one regular contribution per month.");
         }
 
         var memberContributions = await _context.Contributions
@@ -40,15 +41,13 @@ public class CreateContributionCommandHandler : IRequestHandler<CreateContributi
             .ToListAsync();
 
         // Calculate the duration of contributions for this member
-        if (memberContributions.Count >= 6)
+        if (memberContributions.Count >= 1)
         {
-            // The member has contributed for 6 or more months, eligible for benefits
-            // Proceed with the contribution logic
         }
         else
         {
             // Not eligible yet
-            throw new Exception("You must have contributed for at least 6 months to be eligible for benefits.");
+            throw new BusinessException("You must have contributed for at least 1 months to be eligible for benefits.");
         }
 
         var contribution = new Contribution

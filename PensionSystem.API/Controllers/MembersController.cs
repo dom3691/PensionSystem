@@ -1,7 +1,7 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PensionSystem.Application.Features.Commands;
+using PensionSystem.Application.Features.Queries;
 
 namespace PensionSystem.API.Controllers
 {
@@ -16,14 +16,14 @@ namespace PensionSystem.API.Controllers
             _mediator = mediator;
         }
 
-        [HttpPost]
+        [HttpPost("Add Member")]
         public async Task<IActionResult> Register([FromBody] RegisterMemberCommand command)
         {
             var id = await _mediator.Send(command);
             return CreatedAtAction(nameof(Register), new { id }, id);
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("Update Member{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateMemberCommand command)
         {
             if (id != command.Id)
@@ -33,19 +33,19 @@ namespace PensionSystem.API.Controllers
             return Ok(member);
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> SoftDelete(Guid id)
+        [HttpDelete("Delete Member{id}")]
+        public async Task<IActionResult> Delete(Guid id)
         {
-            var result = await _mediator.Send(new SoftDeleteMemberCommand { Id = id });
+            var result = await _mediator.Send(new DeleteMemberCommand { Id = id });
             return result ? NoContent() : NotFound();
         }
 
-        //[HttpGet("{id}")]
-        //public async Task<IActionResult> Get(int id)
-        //{
-        //    var member = await _mediator.Send(new GetMemberQuery { Id = id });
-        //    return Ok(member);
-        //}
+        [HttpGet("RetrieveMember{id}")]
+        public async Task<IActionResult> Get(Guid id)
+        {
+            var member = await _mediator.Send(new GetMemberQuery { Id = id });
+            return Ok(member);
+        }
 
     }
 }
