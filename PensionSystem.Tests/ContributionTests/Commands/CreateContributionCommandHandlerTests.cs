@@ -11,7 +11,7 @@ using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PensionSystem.Tests.ContributionTests
+namespace PensionSystem.Tests.ContributionTests.Commands
 {
     public class CreateContributionCommandHandlerTests
     {
