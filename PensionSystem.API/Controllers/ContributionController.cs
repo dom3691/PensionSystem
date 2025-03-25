@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using Hangfire;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PensionSystem.Application.Features.Commands;
@@ -12,10 +13,21 @@ namespace PensionSystem.API.Controllers
     public class ContributionController : ControllerBase
     {
         private readonly IMediator _mediator;
+        private readonly IBackgroundJobClient _backgroundJobs;
 
-        public ContributionController(IMediator mediator)
+        public ContributionController(IMediator mediator, IBackgroundJobClient backgroundJobs)
         {
             _mediator = mediator;
+            _backgroundJobs = backgroundJobs;
+        }
+
+        [HttpPost("validate-contributions")]
+        public IActionResult ValidateContributions()
+        {
+            // Enqueue the job to run
+            _backgroundJobs.Enqueue<ContributionValidationJob>(job => job.ValidateContributionsAsync());
+
+            return Ok("Contribution validation job has been enqueued.");
         }
 
         [HttpPost("Create Contribution")]
