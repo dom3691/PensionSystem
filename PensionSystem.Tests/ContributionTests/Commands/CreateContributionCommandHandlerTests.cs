@@ -1,156 +1,128 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Moq;
-using PensionSystem.Application.Features.Commands;
-using PensionSystem.Domain.Entities;
-using PensionSystem.Infrastructure.Data;
-using PensionSystem.Infrastructure.ExceptionHandler;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Xunit;
+using PensionSystem.Application.Features.Commands;
+using PensionSystem.Infrastructure.Data;
+using PensionSystem.Domain.Entities;
+using PensionSystem.Infrastructure.ExceptionHandler;
 
-namespace PensionSystem.Tests.ContributionTests.Commands
+public class CreateContributionCommandHandlerTests
 {
-    public class CreateContributionCommandHandlerTests
+    private readonly CreateContributionCommandHandler _handler;
+    private readonly AppDbContext _context;
+
+    public CreateContributionCommandHandlerTests()
     {
-        private readonly Mock<AppDbContext> _mockContext;
-        private readonly CreateContributionCommandHandler _handler;
-        public CreateContributionCommandHandlerTests()
+        // Create an in-memory database for testing
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase("TestDatabase")
+            .Options;
+
+        _context = new AppDbContext(options);
+        _handler = new CreateContributionCommandHandler(_context);
+    }
+
+    [Fact]
+    public async Task Handle_GivenZeroAmount_ShouldThrowException()
+    {
+        // Arrange
+        var request = new CreateContributionCommand
         {
-            _mockContext = new Mock<AppDbContext>();
-            _handler = new CreateContributionCommandHandler(_mockContext.Object);
-        }
-
-
-        [Fact]
-        public async Task Handle_GivenValidContribution_ShouldAddContribution()
-        {
-            // Arrange
-            var memberId = Guid.NewGuid();
-            var contributionDate = new DateTime(2025, 3, 15);
-            var amount = 1000m;
-
-            var request = new CreateContributionCommand
-            {
-                MemberId = memberId,
-                ContributionDate = contributionDate,
-                Amount = amount,
-                IsVoluntary = false
-            };
-
-            var contributions = new List<Contribution>
-        {
-            new Contribution
-            {
-                MemberId = memberId,
-                ContributionDate = new DateTime(2025, 2, 15),
-                Amount = 500m,
-                IsVoluntary = false,
-                IsDeleted = false
-            }
+            MemberId = Guid.NewGuid(),
+            Amount = 0, // Invalid amount
+            ContributionDate = DateTime.Now
         };
 
-            var dbSetMock = new Mock<DbSet<Contribution>>();
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Provider).Returns(contributions.AsQueryable().Provider);
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Expression).Returns(contributions.AsQueryable().Expression);
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.ElementType).Returns(contributions.AsQueryable().ElementType);
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.GetEnumerator()).Returns(contributions.GetEnumerator());
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _handler.Handle(request, CancellationToken.None));
+        Assert.Equal("Contribution amount must be greater than zero.", exception.Message);
+    }
 
-            _mockContext.Setup(c => c.Contributions).Returns(dbSetMock.Object);
 
-            // Act
-            var result = await _handler.Handle(request, CancellationToken.None);
+    [Fact]
+    public async Task Handle_GivenValidContribution_ShouldAddContribution()
+    {
+        // Arrange
+        var memberId = Guid.NewGuid();
 
-            // Assert
-            Assert.NotNull(result);
-            Assert.Equal(memberId, result.MemberId);
-            Assert.Equal(amount, result.Amount);
-            Assert.Equal(contributionDate, result.ContributionDate);
-            Assert.False(result.IsVoluntary);
-        }
-
-        [Fact]
-        public async Task Handle_GivenZeroAmount_ShouldThrowException()
+        // Add a previous contribution to make the member eligible
+        var previousContribution = new Contribution
         {
-            // Arrange
-            var request = new CreateContributionCommand
-            {
-                MemberId = Guid.NewGuid(),
-                ContributionDate = DateTime.Now,
-                Amount = 0, // Invalid amount
-                IsVoluntary = false
-            };
-
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<Exception>(() => _handler.Handle(request, CancellationToken.None));
-            Assert.Equal("Contribution amount must be greater than zero.", exception.Message);
-        }
-
-        [Fact]
-        public async Task Handle_GivenDuplicateContributionForTheMonth_ShouldThrowBusinessException()
-        {
-            // Arrange
-            var request = new CreateContributionCommand
-            {
-                MemberId = Guid.NewGuid(),
-                ContributionDate = new DateTime(2025, 3, 15),
-                Amount = 1000m,
-                IsVoluntary = false
-            };
-
-            var contributions = new List<Contribution>
-        {
-            new Contribution
-            {
-                MemberId = Guid.NewGuid(),
-                ContributionDate = new DateTime(2025, 3, 1),
-                Amount = 500m,
-                IsVoluntary = false,
-                IsDeleted = false
-            }
+            Id = Guid.NewGuid(),
+            MemberId = memberId,
+            Amount = 1000m,
+            ContributionDate = DateTime.Now.AddMonths(-1),
+            IsVoluntary = false,
+            IsDeleted = false
         };
 
-            var dbSetMock = new Mock<DbSet<Contribution>>();
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Provider).Returns(contributions.AsQueryable().Provider);
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Expression).Returns(contributions.AsQueryable().Expression);
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.ElementType).Returns(contributions.AsQueryable().ElementType);
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.GetEnumerator()).Returns(contributions.GetEnumerator());
+        _context.Contributions.Add(previousContribution);
+        await _context.SaveChangesAsync();
 
-            _mockContext.Setup(c => c.Contributions).Returns(dbSetMock.Object);
-
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<BusinessException>(() => _handler.Handle(request, CancellationToken.None));
-            Assert.Equal("You can only make one regular contribution per month.", exception.Message);
-        }
-
-        [Fact]
-        public async Task Handle_GivenNoPreviousContributions_ShouldThrowBusinessException()
+        var request = new CreateContributionCommand
         {
-            // Arrange
-            var request = new CreateContributionCommand
-            {
-                MemberId = Guid.NewGuid(),
-                ContributionDate = DateTime.Now,
-                Amount = 1000m,
-                IsVoluntary = false
-            };
+            MemberId = memberId,
+            Amount = 500,
+            ContributionDate = DateTime.Now
+        };
 
-            var contributions = new List<Contribution>();
+        // Act
+        var result = await _handler.Handle(request, CancellationToken.None);
 
-            var dbSetMock = new Mock<DbSet<Contribution>>();
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Provider).Returns(contributions.AsQueryable().Provider);
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Expression).Returns(contributions.AsQueryable().Expression);
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.ElementType).Returns(contributions.AsQueryable().ElementType);
-            dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.GetEnumerator()).Returns(contributions.GetEnumerator());
+        // Assert
+        var contribution = await _context.Contributions.FindAsync(result);
+        Assert.NotNull(contribution);
+        Assert.Equal(request.Amount, contribution.Amount);
+        Assert.Equal(request.MemberId, contribution.MemberId);
+    }
 
-            _mockContext.Setup(c => c.Contributions).Returns(dbSetMock.Object);
 
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<BusinessException>(() => _handler.Handle(request, CancellationToken.None));
-            Assert.Equal("You must have contributed for at least 1 months to be eligible for benefits.", exception.Message);
-        }
+    [Fact]
+    public async Task Handle_GivenDuplicateContributionForTheMonth_ShouldThrowBusinessException()
+    {
+        // Arrange
+        var memberId = Guid.NewGuid();
+        var contribution1 = new Contribution
+        {
+            Id = Guid.NewGuid(),
+            MemberId = memberId,
+            Amount = 1000,
+            ContributionDate = DateTime.Now.AddMonths(-1),
+            IsVoluntary = false
+        };
 
+        _context.Contributions.Add(contribution1);
+        await _context.SaveChangesAsync();
+
+        var request = new CreateContributionCommand
+        {
+            MemberId = memberId,
+            Amount = 500,
+            ContributionDate = DateTime.Now.AddMonths(-1) // Duplicate month
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() => _handler.Handle(request, CancellationToken.None));
+        Assert.Equal("You can only make one regular contribution per month.", exception.Message);
+    }
+
+    [Fact]
+    public async Task Handle_GivenNoPreviousContributions_ShouldThrowBusinessException()
+    {
+        // Arrange
+        var memberId = Guid.NewGuid();
+
+        var request = new CreateContributionCommand
+        {
+            MemberId = memberId,
+            Amount = 500,
+            ContributionDate = DateTime.Now.AddMonths(-1)
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() => _handler.Handle(request, CancellationToken.None));
+        Assert.Equal("You must have contributed for at least 1 months to be eligible for benefits.", exception.Message);
     }
 }

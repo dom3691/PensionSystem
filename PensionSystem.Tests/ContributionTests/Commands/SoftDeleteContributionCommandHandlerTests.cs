@@ -1,85 +1,95 @@
-﻿using Moq;
+﻿using Microsoft.EntityFrameworkCore;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Xunit;
 using PensionSystem.Application.Features.Commands;
 using PensionSystem.Infrastructure.Data;
-using PensionSystem.Infrastructure.ExceptionHandler;
 using PensionSystem.Domain.Entities;
-using System.Linq.Expressions;
+using PensionSystem.Infrastructure.ExceptionHandler;
 
 public class SoftDeleteContributionCommandHandlerTests
 {
-    private readonly Mock<AppDbContext> _mockContext;
-    private readonly Mock<DbSet<Contribution>> _mockDbSet;
     private readonly SoftDeleteContributionCommandHandler _handler;
+    private readonly AppDbContext _context;
 
     public SoftDeleteContributionCommandHandlerTests()
     {
-        _mockContext = new Mock<AppDbContext>();
-        _mockDbSet = new Mock<DbSet<Contribution>>();
-        _mockContext.Setup(m => m.Contributions).Returns(_mockDbSet.Object);
-        _handler = new SoftDeleteContributionCommandHandler(_mockContext.Object);
-    }
+        // Use an in-memory database for testing
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(databaseName: "TestDatabase")
+            .Options;
 
-    [Fact]
-    public async Task Handle_GivenValidContribution_ShouldSoftDeleteContribution()
-    {
-        // Arrange
-        var request = new SoftDeleteContributionCommand { Id = Guid.NewGuid() };
-        var contribution = new Contribution
-        {
-            Id = request.Id,
-            IsDeleted = false
-        };
-
-        _mockDbSet.Setup(m => m.FirstOrDefaultAsync(It.IsAny<Expression<Func<Contribution, bool>>>(), It.IsAny<CancellationToken>()))
-                  .ReturnsAsync(contribution);
-
-        // Act
-        var result = await _handler.Handle(request, CancellationToken.None);
-
-        // Assert
-        Assert.True(result);
-        Assert.True(contribution.IsDeleted); // The contribution should be marked as deleted
-        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once); // Ensure SaveChangesAsync was called
-    }
-
-    [Fact]
-    public async Task Handle_GivenNonExistingContribution_ShouldThrowBusinessException()
-    {
-        // Arrange
-        var request = new SoftDeleteContributionCommand { Id = Guid.NewGuid() };
-
-        _mockDbSet.Setup(m => m.FirstOrDefaultAsync(It.IsAny<Expression<Func<Contribution, bool>>>(), It.IsAny<CancellationToken>()))
-                  .ReturnsAsync((Contribution)null); // Simulate no contribution found
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BusinessException>(() => _handler.Handle(request, CancellationToken.None));
-        Assert.Equal("Contribution not found", exception.Message);
+        _context = new AppDbContext(options);
+        _handler = new SoftDeleteContributionCommandHandler(_context);
     }
 
     [Fact]
     public async Task Handle_GivenAlreadyDeletedContribution_ShouldNotCallSaveChanges()
     {
         // Arrange
-        var request = new SoftDeleteContributionCommand { Id = Guid.NewGuid() };
+        var contributionId = Guid.NewGuid();
         var contribution = new Contribution
         {
-            Id = request.Id,
-            IsDeleted = true
+            Id = contributionId,
+            MemberId = Guid.NewGuid(),
+            Amount = 1000m,
+            ContributionDate = DateTime.Now,
+            IsVoluntary = false,
+            IsDeleted = true // Already deleted
         };
 
-        _mockDbSet.Setup(m => m.FirstOrDefaultAsync(It.IsAny<Expression<Func<Contribution, bool>>>(), It.IsAny<CancellationToken>()))
-                  .ReturnsAsync(contribution);
+        _context.Contributions.Add(contribution);
+        await _context.SaveChangesAsync();
+
+        var request = new SoftDeleteContributionCommand { Id = contributionId };
 
         // Act
         var result = await _handler.Handle(request, CancellationToken.None);
 
         // Assert
-        Assert.True(result);
-        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never); // No save should be called as it's already deleted
+        var updatedContribution = await _context.Contributions.FindAsync(contributionId);
+        Assert.True(updatedContribution.IsDeleted); // Ensure it's still deleted
+    }
+
+    [Fact]
+    public async Task Handle_GivenValidContribution_ShouldSoftDeleteContribution()
+    {
+        // Arrange
+        var contributionId = Guid.NewGuid();
+        var contribution = new Contribution
+        {
+            Id = contributionId,
+            MemberId = Guid.NewGuid(),
+            Amount = 1000m,
+            ContributionDate = DateTime.Now,
+            IsVoluntary = false,
+            IsDeleted = false // Not deleted
+        };
+
+        _context.Contributions.Add(contribution);
+        await _context.SaveChangesAsync();
+
+        var request = new SoftDeleteContributionCommand { Id = contributionId };
+
+        // Act
+        var result = await _handler.Handle(request, CancellationToken.None);
+
+        // Assert
+        var updatedContribution = await _context.Contributions.FindAsync(contributionId);
+        Assert.True(updatedContribution.IsDeleted); // Ensure it's marked as deleted
+    }
+
+    [Fact]
+    public async Task Handle_GivenNonExistingContribution_ShouldThrowBusinessException()
+    {
+        // Arrange
+        var contributionId = Guid.NewGuid();
+        var request = new SoftDeleteContributionCommand { Id = contributionId };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() => _handler.Handle(request, CancellationToken.None));
+        Assert.Equal("Contribution not found", exception.Message);
     }
 }

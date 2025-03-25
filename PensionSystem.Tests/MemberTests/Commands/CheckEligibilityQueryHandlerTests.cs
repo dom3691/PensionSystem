@@ -1,25 +1,31 @@
-﻿using Moq;
+﻿using Microsoft.EntityFrameworkCore;
+using Moq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Xunit;
 using PensionSystem.Application.Features.Queries;
 using PensionSystem.Application.DTOs;
 using PensionSystem.Infrastructure.Data;
+using PensionSystem.Infrastructure.ExceptionHandler;
 using PensionSystem.Domain.Entities;
 
 public class CheckEligibilityQueryHandlerTests
 {
-    private readonly Mock<AppDbContext> _mockContext;
     private readonly CheckEligibilityQueryHandler _handler;
+    private readonly AppDbContext _context;
 
     public CheckEligibilityQueryHandlerTests()
     {
-        _mockContext = new Mock<AppDbContext>();
-        _handler = new CheckEligibilityQueryHandler(_mockContext.Object);
+        // Use an in-memory database for testing
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(databaseName: "TestDatabase")
+            .Options;
+
+        _context = new AppDbContext(options);
+        _handler = new CheckEligibilityQueryHandler(_context);
     }
 
     [Fact]
@@ -29,21 +35,16 @@ public class CheckEligibilityQueryHandlerTests
         var memberId = Guid.NewGuid();
         var contributions = new List<Contribution>
         {
-            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-1), IsDeleted = false },
-            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-2), IsDeleted = false },
-            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-3), IsDeleted = false },
-            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-4), IsDeleted = false },
-            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-5), IsDeleted = false },
-            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-6), IsDeleted = false }
+            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-1), IsDeleted = false, Amount = 100 },
+            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-2), IsDeleted = false, Amount = 100 },
+            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-3), IsDeleted = false, Amount = 100 },
+            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-4), IsDeleted = false, Amount = 100 },
+            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-5), IsDeleted = false, Amount = 100 },
+            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-6), IsDeleted = false, Amount = 100 }
         };
 
-        var dbSetMock = new Mock<DbSet<Contribution>>();
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Provider).Returns(contributions.AsQueryable().Provider);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Expression).Returns(contributions.AsQueryable().Expression);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.ElementType).Returns(contributions.AsQueryable().ElementType);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.GetEnumerator()).Returns(contributions.GetEnumerator());
-
-        _mockContext.Setup(c => c.Contributions).Returns(dbSetMock.Object);
+        _context.Contributions.AddRange(contributions);
+        await _context.SaveChangesAsync();
 
         var request = new CheckEligibilityQuery { MemberId = memberId };
 
@@ -62,20 +63,13 @@ public class CheckEligibilityQueryHandlerTests
         var memberId = Guid.NewGuid();
         var contributions = new List<Contribution>
         {
-            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-1), IsDeleted = false },
-            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-2), IsDeleted = false },
-            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-3), IsDeleted = false },
-            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-4), IsDeleted = false },
-            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-5), IsDeleted = false }
+            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-1), IsDeleted = false, Amount = 100 },
+            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-2), IsDeleted = false, Amount = 100 },
+            new Contribution { MemberId = memberId, ContributionDate = DateTime.Now.AddMonths(-3), IsDeleted = false, Amount = 100 }
         };
 
-        var dbSetMock = new Mock<DbSet<Contribution>>();
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Provider).Returns(contributions.AsQueryable().Provider);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Expression).Returns(contributions.AsQueryable().Expression);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.ElementType).Returns(contributions.AsQueryable().ElementType);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.GetEnumerator()).Returns(contributions.GetEnumerator());
-
-        _mockContext.Setup(c => c.Contributions).Returns(dbSetMock.Object);
+        _context.Contributions.AddRange(contributions);
+        await _context.SaveChangesAsync();
 
         var request = new CheckEligibilityQuery { MemberId = memberId };
 

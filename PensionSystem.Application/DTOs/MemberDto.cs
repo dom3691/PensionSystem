@@ -1,21 +1,26 @@
 ﻿using PensionSystem.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace PensionSystem.Application.DTOs;
 
 public class MemberDto
 {
+    public Guid Id { get; set; }
     public string FullName { get; set; }
     public DateTime DateOfBirth { get; set; }
     public string Email { get; set; }
     public string Phone { get; set; }
 
-    public static implicit operator MemberDto(Member v)
+    // Implicit conversion from Member to MemberDto
+    public static implicit operator MemberDto(Member member)
     {
-        throw new NotImplementedException();
+        if (member == null)
+            throw new ArgumentNullException(nameof(member));
+
+        return new MemberDto
+        {
+            Id = member.Id,
+            FullName = member.FullName,
+            DateOfBirth = member.DateOfBirth,
+            Email = member.Email,
+            Phone = member.Phone
+        };
     }
 }

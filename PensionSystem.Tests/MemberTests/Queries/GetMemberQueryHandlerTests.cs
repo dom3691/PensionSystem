@@ -1,19 +1,29 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Moq;
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Xunit;
 using PensionSystem.Application.Features.Queries;
-using PensionSystem.Domain.Entities;
+using PensionSystem.Application.DTOs;
 using PensionSystem.Infrastructure.Data;
+using PensionSystem.Domain.Entities;
 using PensionSystem.Infrastructure.ExceptionHandler;
 
 public class GetMemberQueryHandlerTests
 {
-    private readonly Mock<AppDbContext> _mockContext;
     private readonly GetMemberQueryHandler _handler;
+    private readonly AppDbContext _context;
 
     public GetMemberQueryHandlerTests()
     {
-        _mockContext = new Mock<AppDbContext>();
-        _handler = new GetMemberQueryHandler(_mockContext.Object);
+        // Create in-memory database for testing
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(databaseName: "TestDatabase")
+            .Options;
+
+        _context = new AppDbContext(options);
+        _handler = new GetMemberQueryHandler(_context);
     }
 
     [Fact]
@@ -31,13 +41,8 @@ public class GetMemberQueryHandlerTests
             IsDeleted = false
         };
 
-        var dbSetMock = new Mock<DbSet<Member>>();
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.Provider).Returns(new List<Member> { member }.AsQueryable().Provider);
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.Expression).Returns(new List<Member> { member }.AsQueryable().Expression);
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.ElementType).Returns(new List<Member> { member }.AsQueryable().ElementType);
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.GetEnumerator()).Returns(new List<Member> { member }.GetEnumerator());
-
-        _mockContext.Setup(c => c.Members).Returns(dbSetMock.Object);
+        _context.Members.Add(member);
+        await _context.SaveChangesAsync();
 
         var request = new GetMemberQuery { Id = memberId };
 
@@ -58,14 +63,6 @@ public class GetMemberQueryHandlerTests
         // Arrange
         var memberId = Guid.NewGuid();
 
-        var dbSetMock = new Mock<DbSet<Member>>();
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.Provider).Returns(Enumerable.Empty<Member>().AsQueryable().Provider);
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.Expression).Returns(Enumerable.Empty<Member>().AsQueryable().Expression);
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.ElementType).Returns(Enumerable.Empty<Member>().AsQueryable().ElementType);
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.GetEnumerator()).Returns(Enumerable.Empty<Member>().GetEnumerator());
-
-        _mockContext.Setup(c => c.Members).Returns(dbSetMock.Object);
-
         var request = new GetMemberQuery { Id = memberId };
 
         // Act & Assert
@@ -85,16 +82,11 @@ public class GetMemberQueryHandlerTests
             DateOfBirth = new DateTime(1990, 5, 1),
             Email = "janedoe@example.com",
             Phone = "987-654-3210",
-            IsDeleted = true // Marked as 
+            IsDeleted = true // Marked as deleted
         };
 
-        var dbSetMock = new Mock<DbSet<Member>>();
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.Provider).Returns(new List<Member> { member }.AsQueryable().Provider);
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.Expression).Returns(new List<Member> { member }.AsQueryable().Expression);
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.ElementType).Returns(new List<Member> { member }.AsQueryable().ElementType);
-        dbSetMock.As<IQueryable<Member>>().Setup(m => m.GetEnumerator()).Returns(new List<Member> { member }.GetEnumerator());
-
-        _mockContext.Setup(c => c.Members).Returns(dbSetMock.Object);
+        _context.Members.Add(member);
+        await _context.SaveChangesAsync();
 
         var request = new GetMemberQuery { Id = memberId };
 

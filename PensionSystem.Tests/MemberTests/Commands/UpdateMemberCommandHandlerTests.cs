@@ -1,23 +1,27 @@
-﻿using Moq;
+﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Xunit;
 using PensionSystem.Application.Features.Commands;
-using PensionSystem.Application.DTOs;
 using PensionSystem.Infrastructure.Data;
 using PensionSystem.Domain.Entities;
+using PensionSystem.Infrastructure.ExceptionHandler;
 
 public class UpdateMemberCommandHandlerTests
 {
-    private readonly Mock<AppDbContext> _mockContext;
     private readonly UpdateMemberCommandHandler _handler;
+    private readonly AppDbContext _context;
 
     public UpdateMemberCommandHandlerTests()
     {
-        _mockContext = new Mock<AppDbContext>();
-        _handler = new UpdateMemberCommandHandler(_mockContext.Object);
+        // Use an in-memory database for testing
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(databaseName: "TestDatabase")
+            .Options;
+
+        _context = new AppDbContext(options);
+        _handler = new UpdateMemberCommandHandler(_context);
     }
 
     [Fact]
@@ -25,59 +29,54 @@ public class UpdateMemberCommandHandlerTests
     {
         // Arrange
         var memberId = Guid.NewGuid();
-        var request = new UpdateMemberCommand
-        {
-            Id = memberId,
-            FullName = "Updated FullName",
-            DateOfBirth = new DateTime(1990, 5, 1),
-            Email = "updatedemail@example.com",
-            Phone = "098-765-4321"
-        };
-
         var member = new Member
         {
             Id = memberId,
-            FullName = "Original FullName",
-            DateOfBirth = new DateTime(1990, 1, 1),
-            Email = "originalemail@example.com",
+            FullName = "John Doe",
+            DateOfBirth = new DateTime(1990, 5, 1),
+            Email = "johndoe@example.com",
             Phone = "123-456-7890"
         };
 
-        // Mock the DbSet and the context
-        var dbSetMock = new Mock<DbSet<Member>>();
-        dbSetMock.Setup(m => m.FindAsync(It.IsAny<Guid>())).ReturnsAsync(member);
+        _context.Members.Add(member);
+        await _context.SaveChangesAsync();
 
-        _mockContext.Setup(c => c.Members).Returns(dbSetMock.Object);
+        var request = new UpdateMemberCommand
+        {
+            Id = memberId,
+            FullName = "John Updated",
+            DateOfBirth = new DateTime(1991, 5, 1),
+            Email = "johnupdated@example.com",
+            Phone = "987-654-3210"
+        };
 
         // Act
         var result = await _handler.Handle(request, CancellationToken.None);
 
         // Assert
-        Assert.Equal(request.FullName, result.FullName);
-        Assert.Equal(request.DateOfBirth, result.DateOfBirth);
-        Assert.Equal(request.Email, result.Email);
-        Assert.Equal(request.Phone, result.Phone);
-
-        _mockContext.Verify(c => c.SaveChangesAsync(CancellationToken.None), Times.Once);
+        var updatedMember = await _context.Members.FindAsync(memberId);
+        Assert.Equal("John Updated", updatedMember.FullName);
+        Assert.Equal(new DateTime(1991, 5, 1), updatedMember.DateOfBirth);
+        Assert.Equal("johnupdated@example.com", updatedMember.Email);
+        Assert.Equal("987-654-3210", updatedMember.Phone);
     }
 
     [Fact]
     public async Task Handle_GivenNonExistingMember_ShouldThrowException()
     {
         // Arrange
+        var memberId = Guid.NewGuid();
         var request = new UpdateMemberCommand
         {
-            Id = Guid.NewGuid(),
-            FullName = "Updated FullName",
-            DateOfBirth = new DateTime(1990, 5, 1),
-            Email = "updatedemail@example.com",
-            Phone = "098-765-4321"
+            Id = memberId,
+            FullName = "Non Existing Member",
+            DateOfBirth = new DateTime(1991, 5, 1),
+            Email = "nonexisting@example.com",
+            Phone = "000-000-0000"
         };
 
-        _mockContext.Setup(c => c.Members.FindAsync(It.IsAny<Guid>())).ReturnsAsync((Member)null);
-
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Exception>(() => _handler.Handle(request, CancellationToken.None));
+        var exception = await Assert.ThrowsAsync<BusinessException>(() => _handler.Handle(request, CancellationToken.None));
         Assert.Equal("Member not found", exception.Message);
     }
 }

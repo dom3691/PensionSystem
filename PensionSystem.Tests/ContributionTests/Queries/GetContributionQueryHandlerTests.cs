@@ -1,24 +1,30 @@
-﻿using Moq;
+﻿using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Xunit;
 using PensionSystem.Application.Features.Queries;
 using PensionSystem.Application.DTOs;
 using PensionSystem.Infrastructure.Data;
-using PensionSystem.Infrastructure.ExceptionHandler;
 using PensionSystem.Domain.Entities;
+using PensionSystem.Infrastructure.ExceptionHandler;
 
 public class GetContributionQueryHandlerTests
 {
-    private readonly Mock<AppDbContext> _mockContext;
     private readonly GetContributionQueryHandler _handler;
+    private readonly AppDbContext _context;
 
     public GetContributionQueryHandlerTests()
     {
-        _mockContext = new Mock<AppDbContext>();
-        _handler = new GetContributionQueryHandler(_mockContext.Object);
+        // Use an in-memory database for testing
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(databaseName: "TestDatabase")
+            .Options;
+
+        _context = new AppDbContext(options);
+        _handler = new GetContributionQueryHandler(_context);
     }
 
     [Fact]
@@ -36,13 +42,8 @@ public class GetContributionQueryHandlerTests
             IsDeleted = false
         };
 
-        var dbSetMock = new Mock<DbSet<Contribution>>();
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Provider).Returns(new List<Contribution> { contribution }.AsQueryable().Provider);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Expression).Returns(new List<Contribution> { contribution }.AsQueryable().Expression);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.ElementType).Returns(new List<Contribution> { contribution }.AsQueryable().ElementType);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.GetEnumerator()).Returns(new List<Contribution> { contribution }.GetEnumerator());
-
-        _mockContext.Setup(c => c.Contributions).Returns(dbSetMock.Object);
+        _context.Contributions.Add(contribution);
+        await _context.SaveChangesAsync();
 
         var request = new GetContributionQuery { Id = contributionId };
 
@@ -63,14 +64,6 @@ public class GetContributionQueryHandlerTests
     {
         // Arrange
         var contributionId = Guid.NewGuid();
-
-        var dbSetMock = new Mock<DbSet<Contribution>>();
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Provider).Returns(Enumerable.Empty<Contribution>().AsQueryable().Provider);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Expression).Returns(Enumerable.Empty<Contribution>().AsQueryable().Expression);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.ElementType).Returns(Enumerable.Empty<Contribution>().AsQueryable().ElementType);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.GetEnumerator()).Returns(Enumerable.Empty<Contribution>().GetEnumerator());
-
-        _mockContext.Setup(c => c.Contributions).Returns(dbSetMock.Object);
 
         var request = new GetContributionQuery { Id = contributionId };
 
@@ -94,13 +87,8 @@ public class GetContributionQueryHandlerTests
             IsDeleted = true // Marked as deleted
         };
 
-        var dbSetMock = new Mock<DbSet<Contribution>>();
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Provider).Returns(new List<Contribution> { contribution }.AsQueryable().Provider);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.Expression).Returns(new List<Contribution> { contribution }.AsQueryable().Expression);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.ElementType).Returns(new List<Contribution> { contribution }.AsQueryable().ElementType);
-        dbSetMock.As<IQueryable<Contribution>>().Setup(m => m.GetEnumerator()).Returns(new List<Contribution> { contribution }.GetEnumerator());
-
-        _mockContext.Setup(c => c.Contributions).Returns(dbSetMock.Object);
+        _context.Contributions.Add(contribution);
+        await _context.SaveChangesAsync();
 
         var request = new GetContributionQuery { Id = contributionId };
 
