@@ -1,14 +1,9 @@
-﻿using Moq;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Xunit;
+﻿using Microsoft.EntityFrameworkCore;
+using Moq;
 using PensionSystem.Application.Features.Queries;
-using PensionSystem.Application.DTOs;
+using PensionSystem.Domain.Entities;
 using PensionSystem.Infrastructure.Data;
 using PensionSystem.Infrastructure.ExceptionHandler;
-using PensionSystem.Domain.Entities;
 
 public class GetMemberQueryHandlerTests
 {
@@ -90,7 +85,7 @@ public class GetMemberQueryHandlerTests
             DateOfBirth = new DateTime(1990, 5, 1),
             Email = "janedoe@example.com",
             Phone = "987-654-3210",
-            IsDeleted = true // Marked as deleted
+            IsDeleted = true // Marked as 
         };
 
         var dbSetMock = new Mock<DbSet<Member>>();
