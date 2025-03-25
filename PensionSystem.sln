@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35728.132 d17.12
+VisualStudioVersion = 17.12.35728.132
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PensionSystem.API", "PensionSystem.API\PensionSystem.API.csproj", "{22CBED13-034D-4558-9D75-80C498862949}"
 EndProject
@@ -10,6 +10,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PensionSystem.Domain", "PensionSystem.Domain\PensionSystem.Domain.csproj", "{1D48D138-E87A-416B-AC71-E3FF6BC926B1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PensionSystem.Infrastructure", "PensionSystem.Infrastructure\PensionSystem.Infrastructure.csproj", "{EABF3C63-5A65-44E1-8445-109650EE86B6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{1304B01E-3712-4154-B453-505AD7B3EC74}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{5210DCF9-9EFB-499C-8142-B563E919208B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PensionSystem.Tests", "PensionSystem.Tests\PensionSystem.Tests.csproj", "{71BC0FB7-3B0A-4320-855B-027E76F4C4D9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,8 +39,19 @@ Global
 		{EABF3C63-5A65-44E1-8445-109650EE86B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EABF3C63-5A65-44E1-8445-109650EE86B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EABF3C63-5A65-44E1-8445-109650EE86B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71BC0FB7-3B0A-4320-855B-027E76F4C4D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71BC0FB7-3B0A-4320-855B-027E76F4C4D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71BC0FB7-3B0A-4320-855B-027E76F4C4D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71BC0FB7-3B0A-4320-855B-027E76F4C4D9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{22CBED13-034D-4558-9D75-80C498862949} = {5210DCF9-9EFB-499C-8142-B563E919208B}
+		{1D1F7546-99FA-4C79-B35A-14CD820E2A55} = {5210DCF9-9EFB-499C-8142-B563E919208B}
+		{1D48D138-E87A-416B-AC71-E3FF6BC926B1} = {5210DCF9-9EFB-499C-8142-B563E919208B}
+		{EABF3C63-5A65-44E1-8445-109650EE86B6} = {5210DCF9-9EFB-499C-8142-B563E919208B}
+		{71BC0FB7-3B0A-4320-855B-027E76F4C4D9} = {1304B01E-3712-4154-B453-505AD7B3EC74}
 	EndGlobalSection
 EndGlobal
