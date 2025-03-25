@@ -10,4 +10,5 @@ public class ContributionDto
     public decimal Amount { get; set; }
     public DateTime ContributionDate { get; set; }
     public bool IsVoluntary { get; set; }
+    public bool IsValidated { get; set; }
 }

@@ -22,7 +22,7 @@ namespace PensionSystem.Application.Features.BackgroundJobs
             public async Task ValidateContributionsAsync()
             {
                 var contributions = await _context.Contributions
-                    .Where(c => !c.IsDeleted && !c.IsVoluntary)
+                    .Where(c => !c.IsDeleted && !c.IsValidated)
                     .ToListAsync();
 
                 foreach (var contribution in contributions)
@@ -37,12 +37,12 @@ namespace PensionSystem.Application.Features.BackgroundJobs
                     if (existingContribution != null)
                     {
                         // Logic for marking the contribution as invalid
-                        contribution.IsVoluntary = false;
+                        contribution.IsValidated = false;
                         _context.Contributions.Update(contribution);
                     }
                     else
                     {
-                        contribution.IsVoluntary = true;
+                        contribution.IsValidated = true;
                     }
                 }
 

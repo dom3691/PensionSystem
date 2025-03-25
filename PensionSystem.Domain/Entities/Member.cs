@@ -15,4 +15,5 @@ public class Member
     public string Phone { get; set; }
     public bool IsDeleted { get; set; } = false;
     public ICollection<Contribution> Contributions { get; set; } = new List<Contribution>();
+    public bool IsEligibleForBenefits { get; set; }
 }

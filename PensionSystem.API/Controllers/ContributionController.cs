@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using PensionSystem.Application.Features.Commands;
 using PensionSystem.Application.Features.Queries;
 using PensionSystem.Infrastructure.ExceptionHandler;
+using static PensionSystem.Application.Features.BackgroundJobs.BackgroundJobs;
 
 namespace PensionSystem.API.Controllers
 {

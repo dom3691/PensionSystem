@@ -5,6 +5,9 @@ using PensionSystem.Infrastructure.Repositories.Interfaces;
 using PensionSystem.Infrastructure.Repositories;
 using MediatR;
 using Hangfire;
+using PensionSystem.API;
+using static PensionSystem.Application.Features.BackgroundJobs.BackgroundJobs;
+using PensionSystem.Application.Features.BackgroundJobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,5 +45,24 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+RecurringJob.AddOrUpdate<ContributionValidationJob>(
+    "ContributionValidationJob",  // Unique job ID
+    job => job.ValidateContributionsAsync(),
+    Cron.Monthly,
+    new RecurringJobOptions { TimeZone = TimeZoneInfo.Local });
+
+RecurringJob.AddOrUpdate<BenefitEligibilityJob>(
+    "BenefitEligibilityJob",  // Unique job ID
+    job => job.UpdateBenefitEligibilityAsync(),
+    Cron.Monthly,
+    new RecurringJobOptions { TimeZone = TimeZoneInfo.Local });
+
+RecurringJob.AddOrUpdate<InterestCalculationJob>(
+    "InterestCalculationJob",  // Unique job ID
+    job => job.CalculateInterestAsync(),
+    Cron.Monthly,
+    new RecurringJobOptions { TimeZone = TimeZoneInfo.Local });
+
 
 app.Run();
